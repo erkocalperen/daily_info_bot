@@ -5,11 +5,9 @@ import os
 import requests
 import re
 from bs4 import BeautifulSoup
-from gtts import gTTS
 import locale
 from telegram import Bot
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
@@ -75,13 +73,6 @@ def get_turkish_today_in_history():
     except Exception as e:
         return f"⚠️ Hata: {e}"
 
-# === SESLİ OKUMA ===
-def speak_words(words):
-    text = ". ".join([f"{w['word']}. {w['example']}" for w in words])
-    tts = gTTS(text=text, lang="en")
-    tts.save("output.mp3")
-    os.system("start output.mp3")  # Mac: 'afplay', Linux: 'mpg123'
-
 # === TELEGRAM MESAJ GÖNDER ===
 def send_telegram_message(token, chat_id, message):
     try:
@@ -117,9 +108,6 @@ def main():
 
     # Gönder
     send_telegram_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
-
-    # Sesli oku
-    speak_words(todays_words)
 
 if __name__ == "__main__":
     main()
