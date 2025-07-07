@@ -7,28 +7,25 @@ import re
 from bs4 import BeautifulSoup
 import locale
 from telegram import Bot
+from telegram.constants import ParseMode
+from telegram.ext import Application
 from dotenv import load_dotenv
 
+# .env dosyasını yükle
 load_dotenv()
-
-# === AYARLAR ===
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
 
-# === VERİ YÜKLEYİCİ ===
 def load_words(filename="words_clean.json"):
     try:
         with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
-        print("❌ Kelime dosyası bulunamadı.")
         return []
 
-# === GÜNLÜK KELİMELER ===
 def get_random_words(words, count=3):
     return random.sample(words, count)
 
-# === WIKIPEDIA'DAN OLAY ÇEK ===
 def get_turkish_today_in_history():
     try:
         locale.setlocale(locale.LC_TIME, 'tr_TR.UTF-8')
@@ -44,8 +41,6 @@ def get_turkish_today_in_history():
         bugun = datetime.datetime.now().strftime("%-d_%B")
 
     url = f"https://tr.wikipedia.org/wiki/{bugun}"
-    print(f"🔍 Wikipedia'dan çekiliyor: {url}")
-
     try:
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
@@ -73,17 +68,7 @@ def get_turkish_today_in_history():
     except Exception as e:
         return f"⚠️ Hata: {e}"
 
-# === TELEGRAM MESAJ GÖNDER ===
-def send_telegram_message(token, chat_id, message):
-    try:
-        bot = Bot(token=token)
-        bot.send_message(chat_id=chat_id, text=message)
-        print("✅ Telegram mesajı gönderildi.")
-    except Exception as e:
-        print(f"❌ Telegram mesaj hatası: {e}")
-
-# === ANA FONKSİYON ===
-def main():
+async def send_daily_message():
     words = load_words("words_clean.json")
     if not words:
         return
@@ -91,23 +76,16 @@ def main():
     todays_words = get_random_words(words)
     today_fact = get_turkish_today_in_history()
 
-    # Terminal yazdır
-    print("\n🧠 Bugünün İngilizce Kelimeleri:\n")
-    for w in todays_words:
-        print(f"🔹 {w['word']} ({w['meaning']})")
-        print(f"    Örnek: {w['example']}\n")
-
-    print("📜 Bugün Tarihte:\n")
-    print(today_fact + "\n")
-
-    # Telegram mesajı hazırla
+    # Mesajı hazırla
     message = "🧠 Bugünün İngilizce Kelimeleri:\n\n"
     for w in todays_words:
         message += f"🔹 {w['word']} ({w['meaning']})\n    {w['example']}\n\n"
     message += "📜 Bugün Tarihte:\n" + today_fact
 
-    # Gönder
-    send_telegram_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
+    # Telegram'a gönder
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+    await application.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(send_daily_message())
